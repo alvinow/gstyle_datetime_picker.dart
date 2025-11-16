@@ -5,7 +5,7 @@ import '../enums/timezone_option.dart';
 /// A Google-style time picker widget with 12-hour or 24-hour format
 class GoogleStyleTimePicker extends StatefulWidget {
   /// Initial time to display (defaults to current time if null)
-  final TimeOfDay? initialTime;
+  final DateTime? initialTime;
 
   /// Use 24-hour format (true) or 12-hour format with AM/PM (false)
   final bool use24HourFormat;
@@ -20,7 +20,7 @@ class GoogleStyleTimePicker extends StatefulWidget {
   final bool readOnly;
 
   /// Callback when time is selected
-  final Function(TimeOfDay) onTimeSelected;
+  final Function(DateTime) onTimeSelected;
 
   const GoogleStyleTimePicker({
     Key? key,
@@ -44,15 +44,16 @@ class _GoogleStyleTimePickerState extends State<GoogleStyleTimePicker> {
   @override
   void initState() {
     super.initState();
-    final time = widget.initialTime ?? TimeOfDay.now();
+    final time = widget.initialTime ?? DateTime.now();
     if (widget.use24HourFormat) {
       selectedHour = time.hour;
       selectedMinute = time.minute;
       selectedPeriod = '';
     } else {
-      selectedHour = time.hourOfPeriod == 0 ? 12 : time.hourOfPeriod;
+      final hourOfPeriod = time.hour % 12;
+      selectedHour = hourOfPeriod == 0 ? 12 : hourOfPeriod;
       selectedMinute = time.minute;
-      selectedPeriod = time.period == DayPeriod.am ? 'AM' : 'PM';
+      selectedPeriod = time.hour >= 12 ? 'PM' : 'AM';
     }
   }
 
@@ -75,30 +76,27 @@ class _GoogleStyleTimePickerState extends State<GoogleStyleTimePicker> {
       }
     }
 
-    TimeOfDay time = TimeOfDay(hour: hour24, minute: selectedMinute);
-    time = _applyTimeZone(time);
+    final now = DateTime.now();
+    DateTime selectedDateTime = DateTime(now.year, now.month, now.day, hour24, selectedMinute);
+    selectedDateTime = _applyTimeZone(selectedDateTime);
 
-    widget.onTimeSelected(time);
+    widget.onTimeSelected(selectedDateTime);
     Navigator.of(context).pop();
   }
 
-  TimeOfDay _applyTimeZone(TimeOfDay time) {
-    final now = DateTime.now();
-    DateTime dateTime = DateTime(now.year, now.month, now.day, time.hour, time.minute);
-
+  DateTime _applyTimeZone(DateTime dateTime) {
     switch (widget.timeZoneOption) {
       case TimeZoneOption.keepUnchanged:
-        return time;
+        return dateTime;
       case TimeZoneOption.forceSystemTimeZone:
-        dateTime = dateTime.toLocal();
-        return TimeOfDay(hour: dateTime.hour, minute: dateTime.minute);
+        return dateTime.toLocal();
       case TimeZoneOption.forceSpecific:
         if (widget.specificTimeZone != null) {
           final location = tz.getLocation(widget.specificTimeZone!);
           final tzDateTime = tz.TZDateTime.from(dateTime, location);
-          return TimeOfDay(hour: tzDateTime.hour, minute: tzDateTime.minute);
+          return tzDateTime;
         }
-        return time;
+        return dateTime;
     }
   }
 
