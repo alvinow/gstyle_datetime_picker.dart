@@ -8,8 +8,8 @@ class GoogleStyleDatePicker extends StatefulWidget {
   /// Locale for month name formatting (e.g., 'en_US', 'id_ID')
   final String locale;
 
-  /// Initial date to display
-  final DateTime initialDate;
+  /// Initial date to display (defaults to current date if null)
+  final DateTime? initialDate;
 
   /// Minimum selectable date
   final DateTime minDate;
@@ -33,7 +33,7 @@ class GoogleStyleDatePicker extends StatefulWidget {
   const GoogleStyleDatePicker({
     Key? key,
     required this.locale,
-    required this.initialDate,
+    this.initialDate,
     required this.minDate,
     required this.maxDate,
     this.timeZoneOption = TimeZoneOption.keepUnchanged,
@@ -55,9 +55,10 @@ class _GoogleStyleDatePickerState extends State<GoogleStyleDatePicker> {
   @override
   void initState() {
     super.initState();
-    selectedDay = widget.initialDate.day;
-    selectedMonth = widget.initialDate.month;
-    selectedYear = widget.initialDate.year;
+    final date = widget.initialDate ?? DateTime.now();
+    selectedDay = date.day;
+    selectedMonth = date.month;
+    selectedYear = date.year;
     monthNames = _generateMonthNames();
   }
 

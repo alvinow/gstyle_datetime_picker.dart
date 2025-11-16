@@ -4,8 +4,8 @@ import '../enums/timezone_option.dart';
 
 /// A Google-style time picker widget with 12-hour or 24-hour format
 class GoogleStyleTimePicker extends StatefulWidget {
-  /// Initial time to display
-  final TimeOfDay initialTime;
+  /// Initial time to display (defaults to current time if null)
+  final TimeOfDay? initialTime;
 
   /// Use 24-hour format (true) or 12-hour format with AM/PM (false)
   final bool use24HourFormat;
@@ -24,7 +24,7 @@ class GoogleStyleTimePicker extends StatefulWidget {
 
   const GoogleStyleTimePicker({
     Key? key,
-    required this.initialTime,
+    this.initialTime,
     this.use24HourFormat = false,
     this.timeZoneOption = TimeZoneOption.keepUnchanged,
     this.specificTimeZone,
@@ -44,14 +44,15 @@ class _GoogleStyleTimePickerState extends State<GoogleStyleTimePicker> {
   @override
   void initState() {
     super.initState();
+    final time = widget.initialTime ?? TimeOfDay.now();
     if (widget.use24HourFormat) {
-      selectedHour = widget.initialTime.hour;
-      selectedMinute = widget.initialTime.minute;
+      selectedHour = time.hour;
+      selectedMinute = time.minute;
       selectedPeriod = '';
     } else {
-      selectedHour = widget.initialTime.hourOfPeriod == 0 ? 12 : widget.initialTime.hourOfPeriod;
-      selectedMinute = widget.initialTime.minute;
-      selectedPeriod = widget.initialTime.period == DayPeriod.am ? 'AM' : 'PM';
+      selectedHour = time.hourOfPeriod == 0 ? 12 : time.hourOfPeriod;
+      selectedMinute = time.minute;
+      selectedPeriod = time.period == DayPeriod.am ? 'AM' : 'PM';
     }
   }
 

@@ -8,8 +8,8 @@ class GoogleStyleDateTimePicker extends StatefulWidget {
   /// Locale for month name formatting (e.g., 'en_US', 'id_ID')
   final String locale;
 
-  /// Initial datetime to display
-  final DateTime initialDateTime;
+  /// Initial datetime to display (defaults to current datetime if null)
+  final DateTime? initialDateTime;
 
   /// Minimum selectable date
   final DateTime minDate;
@@ -35,7 +35,7 @@ class GoogleStyleDateTimePicker extends StatefulWidget {
   const GoogleStyleDateTimePicker({
     Key? key,
     required this.locale,
-    required this.initialDateTime,
+    this.initialDateTime,
     required this.minDate,
     required this.maxDate,
     this.use24HourFormat = false,
@@ -61,19 +61,20 @@ class _GoogleStyleDateTimePickerState extends State<GoogleStyleDateTimePicker> {
   @override
   void initState() {
     super.initState();
-    selectedDay = widget.initialDateTime.day;
-    selectedMonth = widget.initialDateTime.month;
-    selectedYear = widget.initialDateTime.year;
+    final dateTime = widget.initialDateTime ?? DateTime.now();
+    selectedDay = dateTime.day;
+    selectedMonth = dateTime.month;
+    selectedYear = dateTime.year;
 
     if (widget.use24HourFormat) {
-      selectedHour = widget.initialDateTime.hour;
-      selectedMinute = widget.initialDateTime.minute;
+      selectedHour = dateTime.hour;
+      selectedMinute = dateTime.minute;
       selectedPeriod = '';
     } else {
-      final hourOfPeriod = widget.initialDateTime.hour % 12;
+      final hourOfPeriod = dateTime.hour % 12;
       selectedHour = hourOfPeriod == 0 ? 12 : hourOfPeriod;
-      selectedMinute = widget.initialDateTime.minute;
-      selectedPeriod = widget.initialDateTime.hour >= 12 ? 'PM' : 'AM';
+      selectedMinute = dateTime.minute;
+      selectedPeriod = dateTime.hour >= 12 ? 'PM' : 'AM';
     }
 
     monthNames = _generateMonthNames();
