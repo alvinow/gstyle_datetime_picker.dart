@@ -16,6 +16,9 @@ class GoogleStyleTimePicker extends StatefulWidget {
   /// Specific timezone name (required when timeZoneOption is forceSpecific)
   final String? specificTimeZone;
 
+  /// Make the picker read-only (displays values but prevents modification)
+  final bool readOnly;
+
   /// Callback when time is selected
   final Function(TimeOfDay) onTimeSelected;
 
@@ -25,6 +28,7 @@ class GoogleStyleTimePicker extends StatefulWidget {
     this.use24HourFormat = false,
     this.timeZoneOption = TimeZoneOption.keepUnchanged,
     this.specificTimeZone,
+    this.readOnly = false,
     required this.onTimeSelected,
   }) : super(key: key);
 
@@ -52,6 +56,11 @@ class _GoogleStyleTimePickerState extends State<GoogleStyleTimePicker> {
   }
 
   void _validateAndSubmit() {
+    if (widget.readOnly) {
+      Navigator.of(context).pop();
+      return;
+    }
+
     int hour24;
 
     if (widget.use24HourFormat) {
@@ -103,9 +112,27 @@ class _GoogleStyleTimePickerState extends State<GoogleStyleTimePicker> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Select Time',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            Row(
+              children: [
+                Text(
+                  widget.readOnly ? 'Time' : 'Select Time',
+                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+                if (widget.readOnly) ...[
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[300],
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: const Text(
+                      'Read Only',
+                      style: TextStyle(fontSize: 12, color: Colors.black54),
+                    ),
+                  ),
+                ],
+              ],
             ),
             const SizedBox(height: 24),
             Row(
@@ -117,7 +144,7 @@ class _GoogleStyleTimePickerState extends State<GoogleStyleTimePicker> {
                     items: widget.use24HourFormat
                         ? List.generate(24, (i) => i.toString().padLeft(2, '0'))
                         : List.generate(12, (i) => (i + 1).toString()),
-                    onChanged: (val) => setState(() => selectedHour = int.parse(val!)),
+                    onChanged: widget.readOnly ? null : (val) => setState(() => selectedHour = int.parse(val!)),
                   ),
                 ),
                 const SizedBox(width: 16),
@@ -126,7 +153,7 @@ class _GoogleStyleTimePickerState extends State<GoogleStyleTimePicker> {
                     label: 'Minute',
                     value: selectedMinute.toString().padLeft(2, '0'),
                     items: List.generate(60, (i) => i.toString().padLeft(2, '0')),
-                    onChanged: (val) => setState(() => selectedMinute = int.parse(val!)),
+                    onChanged: widget.readOnly ? null : (val) => setState(() => selectedMinute = int.parse(val!)),
                   ),
                 ),
                 if (!widget.use24HourFormat) ...[
@@ -136,7 +163,7 @@ class _GoogleStyleTimePickerState extends State<GoogleStyleTimePicker> {
                       label: 'Period',
                       value: selectedPeriod,
                       items: const ['AM', 'PM'],
-                      onChanged: (val) => setState(() => selectedPeriod = val!),
+                      onChanged: widget.readOnly ? null : (val) => setState(() => selectedPeriod = val!),
                     ),
                   ),
                 ],
@@ -148,18 +175,20 @@ class _GoogleStyleTimePickerState extends State<GoogleStyleTimePicker> {
               children: [
                 TextButton(
                   onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('Cancel'),
+                  child: Text(widget.readOnly ? 'Close' : 'Cancel'),
                 ),
-                const SizedBox(width: 8),
-                ElevatedButton(
-                  onPressed: _validateAndSubmit,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue[700],
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                if (!widget.readOnly) ...[
+                  const SizedBox(width: 8),
+                  ElevatedButton(
+                    onPressed: _validateAndSubmit,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blue[700],
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    ),
+                    child: const Text('OK'),
                   ),
-                  child: const Text('OK'),
-                ),
+                ],
               ],
             ),
           ],
@@ -172,21 +201,29 @@ class _GoogleStyleTimePickerState extends State<GoogleStyleTimePicker> {
     required String label,
     required String value,
     required List<String> items,
-    required Function(String?) onChanged,
+    required Function(String?)? onChanged,
   }) {
+    final isDisabled = onChanged == null;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           label,
-          style: const TextStyle(fontSize: 12, color: Colors.grey),
+          style: TextStyle(
+            fontSize: 12,
+            color: isDisabled ? Colors.grey[400] : Colors.grey,
+          ),
         ),
         const SizedBox(height: 8),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12),
           decoration: BoxDecoration(
-            border: Border.all(color: Colors.grey[400]!),
+            border: Border.all(
+              color: isDisabled ? Colors.grey[300]! : Colors.grey[400]!,
+            ),
             borderRadius: BorderRadius.circular(4),
+            color: isDisabled ? Colors.grey[100] : Colors.white,
           ),
           child: DropdownButton<String>(
             value: value,
@@ -195,10 +232,20 @@ class _GoogleStyleTimePickerState extends State<GoogleStyleTimePicker> {
             items: items.map((item) {
               return DropdownMenuItem(
                 value: item,
-                child: Text(item),
+                enabled: !isDisabled,
+                child: Text(
+                  item,
+                  style: TextStyle(
+                    color: isDisabled ? Colors.grey[600] : Colors.black,
+                  ),
+                ),
               );
             }).toList(),
-            onChanged: onChanged,
+            onChanged: isDisabled ? null : onChanged,
+            disabledHint: Text(
+              value,
+              style: TextStyle(color: Colors.grey[600]),
+            ),
           ),
         ),
       ],
