@@ -136,12 +136,7 @@ class _GoogleStyleDatePickerState extends State<GoogleStyleDatePicker> {
 
   @override
   Widget build(BuildContext context) {
-    return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-      child: Container(
-        width: 500,
-        padding: const EdgeInsets.all(24),
-        child: Column(
+    return Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -226,9 +221,9 @@ class _GoogleStyleDatePickerState extends State<GoogleStyleDatePicker> {
               ],
             ),
           ],
-        ),
-      ),
-    );
+        );
+
+
   }
 
   Widget _buildDropdown({
