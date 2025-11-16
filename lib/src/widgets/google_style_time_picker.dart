@@ -20,7 +20,10 @@ class GoogleStyleTimePicker extends StatefulWidget {
   final bool readOnly;
 
   /// Callback when time is selected
-  final Function(DateTime) onTimeSelected;
+  final void Function(DateTime) onTimeSelected;
+
+  /// Callback when time is changed (called on every dropdown change)
+  final void Function(DateTime)? onChanged;
 
   const GoogleStyleTimePicker({
     Key? key,
@@ -30,6 +33,7 @@ class GoogleStyleTimePicker extends StatefulWidget {
     this.specificTimeZone,
     this.readOnly = false,
     required this.onTimeSelected,
+    this.onChanged,
   }) : super(key: key);
 
   @override
@@ -58,10 +62,7 @@ class _GoogleStyleTimePickerState extends State<GoogleStyleTimePicker> {
   }
 
   void _validateAndSubmit() {
-    if (widget.readOnly) {
-      Navigator.of(context).pop();
-      return;
-    }
+    if (widget.readOnly) return;
 
     int hour24;
 
@@ -81,7 +82,7 @@ class _GoogleStyleTimePickerState extends State<GoogleStyleTimePicker> {
     selectedDateTime = _applyTimeZone(selectedDateTime);
 
     widget.onTimeSelected(selectedDateTime);
-    Navigator.of(context).pop();
+    widget.onChanged?.call(selectedDateTime);
   }
 
   DateTime _applyTimeZone(DateTime dateTime) {
@@ -102,97 +103,76 @@ class _GoogleStyleTimePickerState extends State<GoogleStyleTimePicker> {
 
   @override
   Widget build(BuildContext context) {
-    return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-      child: Container(
-        width: 400,
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (widget.readOnly)
+          Row(
+            children: [
+              const Text(
+                'Time',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+              ),
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: const Text(
+                  'Read Only',
+                  style: TextStyle(fontSize: 12, color: Colors.black54),
+                ),
+              ),
+            ],
+          ),
+        if (widget.readOnly) const SizedBox(height: 12),
+        Row(
           children: [
-            Row(
-              children: [
-                Text(
-                  widget.readOnly ? 'Time' : 'Select Time',
-                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                ),
-                if (widget.readOnly) ...[
-                  const SizedBox(width: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Colors.grey[300],
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: const Text(
-                      'Read Only',
-                      style: TextStyle(fontSize: 12, color: Colors.black54),
-                    ),
-                  ),
-                ],
-              ],
+            Expanded(
+              child: _buildDropdown(
+                label: 'Hour',
+                value: selectedHour.toString().padLeft(widget.use24HourFormat ? 2 : 1, '0'),
+                items: widget.use24HourFormat
+                    ? List.generate(24, (i) => i.toString().padLeft(2, '0'))
+                    : List.generate(12, (i) => (i + 1).toString()),
+                onChanged: widget.readOnly ? null : (val) {
+                  setState(() => selectedHour = int.parse(val!));
+                  _validateAndSubmit();
+                },
+              ),
             ),
-            const SizedBox(height: 24),
-            Row(
-              children: [
-                Expanded(
-                  child: _buildDropdown(
-                    label: 'Hour',
-                    value: selectedHour.toString().padLeft(widget.use24HourFormat ? 2 : 1, '0'),
-                    items: widget.use24HourFormat
-                        ? List.generate(24, (i) => i.toString().padLeft(2, '0'))
-                        : List.generate(12, (i) => (i + 1).toString()),
-                    onChanged: widget.readOnly ? null : (val) => setState(() => selectedHour = int.parse(val!)),
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: _buildDropdown(
-                    label: 'Minute',
-                    value: selectedMinute.toString().padLeft(2, '0'),
-                    items: List.generate(60, (i) => i.toString().padLeft(2, '0')),
-                    onChanged: widget.readOnly ? null : (val) => setState(() => selectedMinute = int.parse(val!)),
-                  ),
-                ),
-                if (!widget.use24HourFormat) ...[
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: _buildDropdown(
-                      label: 'Period',
-                      value: selectedPeriod,
-                      items: const ['AM', 'PM'],
-                      onChanged: widget.readOnly ? null : (val) => setState(() => selectedPeriod = val!),
-                    ),
-                  ),
-                ],
-              ],
+            const SizedBox(width: 16),
+            Expanded(
+              child: _buildDropdown(
+                label: 'Minute',
+                value: selectedMinute.toString().padLeft(2, '0'),
+                items: List.generate(60, (i) => i.toString().padLeft(2, '0')),
+                onChanged: widget.readOnly ? null : (val) {
+                  setState(() => selectedMinute = int.parse(val!));
+                  _validateAndSubmit();
+                },
+              ),
             ),
-            const SizedBox(height: 24),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: Text(widget.readOnly ? 'Close' : 'Cancel'),
+            if (!widget.use24HourFormat) ...[
+              const SizedBox(width: 16),
+              Expanded(
+                child: _buildDropdown(
+                  label: 'Period',
+                  value: selectedPeriod,
+                  items: const ['AM', 'PM'],
+                  onChanged: widget.readOnly ? null : (val) {
+                    setState(() => selectedPeriod = val!);
+                    _validateAndSubmit();
+                  },
                 ),
-                if (!widget.readOnly) ...[
-                  const SizedBox(width: 8),
-                  ElevatedButton(
-                    onPressed: _validateAndSubmit,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue[700],
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                    ),
-                    child: const Text('OK'),
-                  ),
-                ],
-              ],
-            ),
+              ),
+            ],
           ],
         ),
-      ),
+      ],
     );
   }
 

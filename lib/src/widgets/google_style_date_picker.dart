@@ -28,7 +28,10 @@ class GoogleStyleDatePicker extends StatefulWidget {
   final bool readOnly;
 
   /// Callback when date is selected
-  final Function(DateTime) onDateSelected;
+  final void Function(DateTime) onDateSelected;
+
+  /// Callback when date is changed (called on every dropdown change)
+  final void Function(DateTime)? onChanged;
 
   const GoogleStyleDatePicker({
     Key? key,
@@ -40,6 +43,7 @@ class GoogleStyleDatePicker extends StatefulWidget {
     this.specificTimeZone,
     this.readOnly = false,
     required this.onDateSelected,
+    this.onChanged,
   }) : super(key: key);
 
   @override
@@ -89,10 +93,7 @@ class _GoogleStyleDatePickerState extends State<GoogleStyleDatePicker> {
   }
 
   void _validateAndSubmit() {
-    if (widget.readOnly) {
-      Navigator.of(context).pop();
-      return;
-    }
+    if (widget.readOnly) return;
 
     final maxDays = getDaysInMonth(selectedMonth, selectedYear);
     if (selectedDay > maxDays) {
@@ -100,14 +101,6 @@ class _GoogleStyleDatePickerState extends State<GoogleStyleDatePicker> {
     }
 
     if (!isDateValid(selectedDay, selectedMonth, selectedYear)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Date must be between ${widget.minDate.day}/${widget.minDate.month}/${widget.minDate.year} and ${widget.maxDate.day}/${widget.maxDate.month}/${widget.maxDate.year}',
-          ),
-          backgroundColor: Colors.red,
-        ),
-      );
       return;
     }
 
@@ -115,7 +108,7 @@ class _GoogleStyleDatePickerState extends State<GoogleStyleDatePicker> {
     selectedDate = _applyTimeZone(selectedDate);
 
     widget.onDateSelected(selectedDate);
-    Navigator.of(context).pop();
+    widget.onChanged?.call(selectedDate);
   }
 
   DateTime _applyTimeZone(DateTime dateTime) {
@@ -137,93 +130,76 @@ class _GoogleStyleDatePickerState extends State<GoogleStyleDatePicker> {
   @override
   Widget build(BuildContext context) {
     return Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (widget.readOnly)
+          Row(
+            children: [
+              const Text(
+                'Date',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+              ),
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: const Text(
+                  'Read Only',
+                  style: TextStyle(fontSize: 12, color: Colors.black54),
+                ),
+              ),
+            ],
+          ),
+        if (widget.readOnly) const SizedBox(height: 12),
+        Row(
           children: [
-            Row(
-              children: [
-                Text(
-                  widget.readOnly ? 'Date' : 'Select Date',
-                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                ),
-                if (widget.readOnly) ...[
-                  const SizedBox(width: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Colors.grey[300],
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: const Text(
-                      'Read Only',
-                      style: TextStyle(fontSize: 12, color: Colors.black54),
-                    ),
-                  ),
-                ],
-              ],
+            Expanded(
+              child: _buildDropdown(
+                label: 'Day',
+                value: selectedDay.toString(),
+                items: List.generate(31, (i) => (i + 1).toString()),
+                onChanged: widget.readOnly ? null : (val) {
+                  setState(() => selectedDay = int.parse(val!));
+                  _validateAndSubmit();
+                },
+              ),
             ),
-            const SizedBox(height: 24),
-            Row(
-              children: [
-                Expanded(
-                  child: _buildDropdown(
-                    label: 'Day',
-                    value: selectedDay.toString(),
-                    items: List.generate(31, (i) => (i + 1).toString()),
-                    onChanged: widget.readOnly ? null : (val) => setState(() => selectedDay = int.parse(val!)),
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  flex: 2,
-                  child: _buildDropdown(
-                    label: 'Month',
-                    value: monthNames[selectedMonth - 1],
-                    items: monthNames,
-                    onChanged: widget.readOnly ? null : (val) => setState(() =>
-                    selectedMonth = monthNames.indexOf(val!) + 1),
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: _buildDropdown(
-                    label: 'Year',
-                    value: selectedYear.toString(),
-                    items: List.generate(
-                      widget.maxDate.year - widget.minDate.year + 1,
-                          (i) => (widget.minDate.year + i).toString(),
-                    ),
-                    onChanged: widget.readOnly ? null : (val) => setState(() => selectedYear = int.parse(val!)),
-                  ),
-                ),
-              ],
+            const SizedBox(width: 16),
+            Expanded(
+              flex: 2,
+              child: _buildDropdown(
+                label: 'Month',
+                value: monthNames[selectedMonth - 1],
+                items: monthNames,
+                onChanged: widget.readOnly ? null : (val) {
+                  setState(() => selectedMonth = monthNames.indexOf(val!) + 1);
+                  _validateAndSubmit();
+                },
+              ),
             ),
-            const SizedBox(height: 24),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: Text(widget.readOnly ? 'Close' : 'Cancel'),
+            const SizedBox(width: 16),
+            Expanded(
+              child: _buildDropdown(
+                label: 'Year',
+                value: selectedYear.toString(),
+                items: List.generate(
+                  widget.maxDate.year - widget.minDate.year + 1,
+                      (i) => (widget.minDate.year + i).toString(),
                 ),
-                if (!widget.readOnly) ...[
-                  const SizedBox(width: 8),
-                  ElevatedButton(
-                    onPressed: _validateAndSubmit,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue[700],
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                    ),
-                    child: const Text('OK'),
-                  ),
-                ],
-              ],
+                onChanged: widget.readOnly ? null : (val) {
+                  setState(() => selectedYear = int.parse(val!));
+                  _validateAndSubmit();
+                },
+              ),
             ),
           ],
-        );
-
-
+        ),
+      ],
+    );
   }
 
   Widget _buildDropdown({
